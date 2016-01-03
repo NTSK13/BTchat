@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.UUID;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
@@ -17,11 +20,8 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,35 +32,14 @@ public class SearchActivity extends Activity {
 	private BluetoothAdapter myBtAdapter;
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
 	
-	public ArrayList  BtDeviceList;
-	public ArrayList  BtDeviceNameList;
+	public ArrayList<BluetoothDevice>  BtDeviceList;
+	private ArrayAdapter<String> BT_name_adapter;
 	public int BTcount;
 	public BluetoothDevice target_device=null;
-	
-	private ListView lv;
-	
 
 	private ChatThread ClientChatThread;
 	private TextView tv_get_msg;
 	private EditText et_send_msg;
-	
-	
-	
-	private Handler SearchHandler=new Handler(){
-    	@Override
-    	public void handleMessage(Message msg) {		
-    		switch (msg.what) {
-			case 0x04:  
-				Log.v(tag, "SearchHandler msg");
-				lv.invalidateViews();
-				break;
-						
-			default:
-				break;
-			}
-    		
-    	};
-    };
 	
     
     public void SendMsgHandler(View v){
@@ -72,53 +51,55 @@ public class SearchActivity extends Activity {
   	private Handler ClientHandler=new Handler(){
       	@Override
       	public void handleMessage(Message msg) {		
-      		switch (msg.what) {
-  			case 0x02:  
+      		if(msg.what==0x02) {
   				Log.v(tag, "client  get msg");
   				Bundle b=msg.getData();
   				String client_get_msg=b.getString("get_msg");
   				tv_get_msg.setText(client_get_msg);
-  				break;
-  						
-  			default:
-  				break;
-  			}
-      		
+   			}	
       	};
       };
 	
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_lv);
-        
-        lv=(ListView)findViewById(R.id.lv_bt);
-        
-        BtDeviceList=new ArrayList();
-        BtDeviceNameList=new ArrayList();
-    	
-    	
-        ArrayAdapter<String> mAdapter=new ArrayAdapter<String>(this, android.R.layout.simple_list_item_single_choice,BtDeviceNameList);
-        lv.setChoiceMode(ListView.CHOICE_MODE_SINGLE);
-        
-        lv.setOnItemClickListener(new OnItemClickListener() {
+        setContentView(R.layout.activity_client_chat);
 
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position,long id) {
-                  
-            	Log.v(tag, "get target_device position is: "+position);
-            	target_device=(BluetoothDevice)BtDeviceList.get(position);
-            	
-            	myBtAdapter.cancelDiscovery();
-            	lv.setVisibility(View.GONE);
-            	setContentView(R.layout.activity_client_chat);
-            	et_send_msg=(EditText)findViewById(R.id.et_send_msg);
-                tv_get_msg=(TextView)findViewById(R.id.tv_get_msg);
-                
+    	et_send_msg=(EditText)findViewById(R.id.et_send_msg);
+        tv_get_msg=(TextView)findViewById(R.id.tv_get_msg);
+        
+        BtDeviceList=new ArrayList<BluetoothDevice>();
+        myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
+        
+        /***********************Ê≥®ÂÜåBTÂπøÊí≠Êé•Êî∂Âô®*************************/
+        IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(mReceiver, filter);
+        /**********************************************************************************/
+        Log.v(tag, "start search...");
+        myBtAdapter.startDiscovery();//search
+        Toast.makeText(this, "ÊêúÁ¥¢ËìùÁâôËÆæÂ§á‰∏≠ ...", Toast.LENGTH_LONG).show();
+    	
+        BT_name_adapter=new ArrayAdapter<String>(this, android.R.layout.select_dialog_singlechoice);
+        AlertDialog.Builder myDialog=new AlertDialog.Builder(this);
+        myDialog.setTitle("BTÊêúÁ¥¢ÁªìÊûú");
+        myDialog.setCancelable(false);
+        
+        myDialog.setNegativeButton("ÂèñÊ∂à", new OnClickListener(){
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				Toast.makeText(SearchActivity.this, "ÂèñÊ∂à", Toast.LENGTH_SHORT).show();				
+			}
+        	
+        });
+        
+        myDialog.setPositiveButton("Á°ÆÂÆö", new OnClickListener() {
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				Toast.makeText(SearchActivity.this, "Á°ÆÂÆö", Toast.LENGTH_SHORT).show();
                 Log.v(tag, "pairing ...");
     			target_device.createBond();
     			
-                //ø™∆ÙøÕªß∂Àœﬂ≥Ã
+                //ÂêØÂä®ÂÆ¢Êà∑Á´ØÁ∫øÁ®ã
                 Thread clientThread=new Thread(new Runnable(){
             		@Override
             		public void run() {
@@ -142,21 +123,21 @@ public class SearchActivity extends Activity {
             		};
             	});
             	clientThread.start();	
+			}
+		});
+        
+        myDialog.setSingleChoiceItems(BT_name_adapter, 0, new OnClickListener() {
+			@Override
+			public void onClick(DialogInterface arg0, int position) {
+				//ÂèñÊ∂àËìùÁâôÊâ´Êèè
+            	myBtAdapter.cancelDiscovery();
+				Toast.makeText(SearchActivity.this, "ÈÄâÊã©: "+position, Toast.LENGTH_SHORT).show();
+				Log.v(tag, "get target_device position is: "+position);
+            	target_device=(BluetoothDevice)BtDeviceList.get(position);
             	
-            }
-        });
-        
-        lv.setAdapter(mAdapter);
-
-        myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
-        
-        /***********************◊¢≤·¿∂—¿…®√Ëœ‡πÿµƒπ„≤•*************************/
-        IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mReceiver, filter);
-        /**********************************************************************************/
-        Log.v(tag, "start search...");
-        myBtAdapter.startDiscovery();//search
-        Toast.makeText(this, "À—À˜÷– ...", Toast.LENGTH_LONG).show();
+			}
+		});
+        myDialog.show();       
     }
  
     public  BroadcastReceiver mReceiver=new BroadcastReceiver(){
@@ -170,12 +151,9 @@ public class SearchActivity extends Activity {
         			Log.v(tag, "Find device: "+device.getName()+",Device address is :"+device.getAddress() );
         			if(! device.getName().equals("")){
         				BtDeviceList.add(device);
-        		        BtDeviceNameList.add(device.getName());
-
-        				SearchHandler.sendEmptyMessage(0x04);
+        				BT_name_adapter.add(device.getName());  
         			}
-        		}
-				
+        		}	
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

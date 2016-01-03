@@ -35,12 +35,12 @@ public class ServerChatUI extends Activity{
         myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
         
         Log.v(tag, "open Bt visible");
-    	//开启 120s内可见
+    	//鍙120s
     	Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
     	discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 100);
     	startActivity(discoverableIntent);
     	
-      //开启服务端线程
+      //寮�鍚湇鍔＄绾跨▼
    	    Thread serverThread=new Thread(new Runnable(){
     	   	@Override
     	    public void run() {
@@ -51,7 +51,6 @@ public class ServerChatUI extends Activity{
     	    		BluetoothSocket current_socket = server_socket.accept();  
     	    		Log.v(tag, "accepted  client request");
     	    		
-    	    				
     	    		ServerChatThread =new ChatThread(current_socket, ServerHandler,false);
     	    		ServerChatThread.start();
     	    				
@@ -73,18 +72,12 @@ public class ServerChatUI extends Activity{
 	private Handler ServerHandler=new Handler(){
     	@Override
     	public void handleMessage(Message msg) {		
-    		switch (msg.what) {
-			case 0x01:  
+    		if(msg.what==0x01) {
 				Log.v(tag, "server get msg");
 				Bundle b=msg.getData();
 				String server_get_msg=b.getString("get_msg");
 				tv_get_msg.setText(server_get_msg);
-				break;
-						
-			default:
-				break;
 			}
-    		
     	};
     };
     
@@ -95,8 +88,8 @@ public class ServerChatUI extends Activity{
 	    getMenuInflater().inflate(R.menu.init, menu);
 	    return true;
 	 }
-
-	    @Override
+	 
+	 @Override
      public boolean onOptionsItemSelected(MenuItem item) {
 	        // Handle action bar item clicks here. The action bar will
 	        // automatically handle clicks on the Home/Up button, so long
