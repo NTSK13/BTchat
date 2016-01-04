@@ -1,6 +1,9 @@
 package com.exe.btchat;
 
 import java.util.ArrayList;
+import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
 import android.app.Activity;
@@ -33,14 +36,19 @@ public class SearchActivity extends Activity {
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
 	
 	public ArrayList<BluetoothDevice>  BtDeviceList;
+	public ArrayList<BluetoothDevice>  BtBondedDeviceList;
 	private ArrayAdapter<String> BT_name_adapter;
+	private ArrayAdapter<String> BT_Bonded_name_adapter;
+	private Set<BluetoothDevice> pairedDevices;
+	
 	public int BTcount;
 	public BluetoothDevice target_device=null;
 
 	private ChatThread ClientChatThread;
 	private TextView tv_get_msg;
 	private EditText et_send_msg;
-	
+	private Timer myTimer=null;
+	private boolean is_from_search_device=false;
     
     public void SendMsgHandler(View v){
   		String msg=et_send_msg.getText().toString();
@@ -56,50 +64,12 @@ public class SearchActivity extends Activity {
   				Bundle b=msg.getData();
   				String client_get_msg=b.getString("get_msg");
   				tv_get_msg.setText(client_get_msg);
-   			}	
-      	};
-      };
-	
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_client_chat);
-
-    	et_send_msg=(EditText)findViewById(R.id.et_send_msg);
-        tv_get_msg=(TextView)findViewById(R.id.tv_get_msg);
-        
-        BtDeviceList=new ArrayList<BluetoothDevice>();
-        myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
-        
-        /***********************注册BT广播接收器*************************/
-        IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mReceiver, filter);
-        /**********************************************************************************/
-        Log.v(tag, "start search...");
-        myBtAdapter.startDiscovery();//search
-        Toast.makeText(this, "搜索蓝牙设备中 ...", Toast.LENGTH_LONG).show();
-    	
-        BT_name_adapter=new ArrayAdapter<String>(this, android.R.layout.select_dialog_singlechoice);
-        AlertDialog.Builder myDialog=new AlertDialog.Builder(this);
-        myDialog.setTitle("BT搜索结果");
-        myDialog.setCancelable(false);
-        
-        myDialog.setNegativeButton("取消", new OnClickListener(){
-			@Override
-			public void onClick(DialogInterface arg0, int arg1) {
-				Toast.makeText(SearchActivity.this, "取消", Toast.LENGTH_SHORT).show();				
-			}
-        	
-        });
-        
-        myDialog.setPositiveButton("确定", new OnClickListener() {
-			@Override
-			public void onClick(DialogInterface arg0, int arg1) {
-				Toast.makeText(SearchActivity.this, "确定", Toast.LENGTH_SHORT).show();
-                Log.v(tag, "pairing ...");
-    			target_device.createBond();
-    			
-                //启动客户端线程
+   			}else if(msg.what==0x01){
+   				if( is_from_search_device==true){
+   					is_from_search_device=false;
+   					myTimer.cancel();
+   				}
+   				//启动客户端线程
                 Thread clientThread=new Thread(new Runnable(){
             		@Override
             		public void run() {
@@ -123,6 +93,57 @@ public class SearchActivity extends Activity {
             		};
             	});
             	clientThread.start();	
+   			}
+      	};
+      };
+      
+      
+    private void init(){
+    	 BtDeviceList=new ArrayList<BluetoothDevice>();
+         BtBondedDeviceList=new ArrayList<BluetoothDevice>();
+         BT_Bonded_name_adapter=new ArrayAdapter<String>(SearchActivity.this, android.R.layout.select_dialog_singlechoice);
+         myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
+    }
+    
+    private void register_myBTReceiver(){
+    	/***********************注册BT广播接收器*************************/
+        IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(mReceiver, filter);
+    }
+    
+    private void search_device_and_chat(){
+    	Log.v(tag, "start search...");
+        myBtAdapter.startDiscovery();//search
+        Toast.makeText(SearchActivity.this, "搜索蓝牙设备中 ...", Toast.LENGTH_LONG).show();
+    	
+        BT_name_adapter=new ArrayAdapter<String>(SearchActivity.this, android.R.layout.select_dialog_singlechoice);
+        AlertDialog.Builder myDialog=new AlertDialog.Builder(SearchActivity.this);
+        myDialog.setTitle("BT搜索结果");
+        myDialog.setCancelable(false);
+        
+        myDialog.setNegativeButton("取消", new OnClickListener(){
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				Toast.makeText(SearchActivity.this, "取消", Toast.LENGTH_SHORT).show();				
+			}
+        });
+        
+        myDialog.setPositiveButton("确定", new OnClickListener() {
+			@Override
+			public void onClick(DialogInterface arg0, int arg1) {
+				Toast.makeText(SearchActivity.this, "确定", Toast.LENGTH_SHORT).show();
+                Log.v(tag, "pairing ...");
+    			target_device.createBond();
+    			myTimer=new Timer();
+    			myTimer.schedule(new TimerTask() {
+					@Override
+					public void run() {
+						if(target_device.getBondState()==BluetoothDevice.BOND_BONDED){
+							is_from_search_device=true;
+							ClientHandler.sendEmptyMessage(0x01);
+						}
+					}
+				}, 0,100);
 			}
 		});
         
@@ -139,7 +160,61 @@ public class SearchActivity extends Activity {
 		});
         myDialog.show();       
     }
+    
+    private void  get_Bonded_device_and_chat(){
+    	 pairedDevices = myBtAdapter.getBondedDevices(); 
+         if (pairedDevices.size() > 0) { 
+         	for (BluetoothDevice device : pairedDevices) { 
+         		BT_Bonded_name_adapter.add(device.getName());
+         		BtBondedDeviceList.add(device);
+         	 } 
+         }
+         
+         AlertDialog.Builder myBondedDialog=new AlertDialog.Builder(this);
+         myBondedDialog.setTitle("已绑定设备列表");
+         myBondedDialog.setCancelable(false);
+         
+         myBondedDialog.setNegativeButton("扫描其他设备", new OnClickListener(){
+ 			@Override
+ 			public void onClick(DialogInterface arg0, int arg1) {
+ 				search_device_and_chat();
+ 			}
+         });
+         
+         myBondedDialog.setPositiveButton("开始聊天", new OnClickListener() {
+ 			@Override
+ 			public void onClick(DialogInterface arg0, int arg1) {
+ 				Toast.makeText(SearchActivity.this, "确定", Toast.LENGTH_SHORT).show();
+                ClientHandler.sendEmptyMessage(0x01);
+ 			}
+ 		});
+         
+         myBondedDialog.setSingleChoiceItems(BT_Bonded_name_adapter, 0, new OnClickListener() {
+ 			@Override
+ 			public void onClick(DialogInterface arg0, int position) {
+ 				Toast.makeText(SearchActivity.this, "选择: "+position, Toast.LENGTH_SHORT).show();
+ 				Log.v(tag, "get target_device position is: "+position);
+             	target_device=(BluetoothDevice) BtBondedDeviceList.get(position);
+             	Log.v(tag, "target_device name is: "+target_device.getName());
+ 			}
+ 		});
+         myBondedDialog.show(); 
+    }
+	
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_client_chat);
+
+    	et_send_msg=(EditText)findViewById(R.id.et_send_msg);
+        tv_get_msg=(TextView)findViewById(R.id.tv_get_msg);
+        init();
+        register_myBTReceiver();
+        //start chat
+        get_Bonded_device_and_chat();
+    }
  
+    
     public  BroadcastReceiver mReceiver=new BroadcastReceiver(){
     	@Override
     	public void onReceive(android.content.Context mContext, Intent it) {

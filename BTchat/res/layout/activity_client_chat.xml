@@ -32,10 +32,10 @@
         android:id="@+id/tv_get_msg"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_above="@+id/bServerStartChat"
         android:layout_alignRight="@+id/et_send_msg"
-        android:layout_marginRight="67dp"
-        android:layout_marginTop="95dp"
+        android:layout_marginBottom="32dp"
+        android:layout_marginRight="48dp"
         android:text="no msg"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 

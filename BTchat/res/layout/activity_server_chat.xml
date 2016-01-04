@@ -26,16 +26,36 @@
         android:layout_height="wrap_content"
         android:layout_alignBottom="@+id/bServerStartChat"
         android:layout_toLeftOf="@+id/bServerStartChat"
-        android:ems="10" />
+        android:ems="10" 
+        android:hint="请输入消息"/>
+
+    <ProgressBar
+        android:id="@+id/waitBar"
+        style="?android:attr/progressBarStyleLarge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/tv_get_msg"
+        android:layout_alignLeft="@+id/wait_tv"
+        android:layout_marginBottom="66dp" />
+
+    <TextView
+        android:id="@+id/wait_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/waitBar"
+        android:layout_alignRight="@+id/et_send_msg"
+        android:layout_marginBottom="50dp"
+        android:layout_marginRight="28dp"
+        android:text="等待被连接..."
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <TextView
         android:id="@+id/tv_get_msg"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignRight="@+id/et_send_msg"
-        android:layout_marginRight="67dp"
-        android:layout_marginTop="95dp"
+        android:layout_above="@+id/bServerStartChat"
+        android:layout_alignRight="@+id/wait_tv"
+        android:layout_marginBottom="34dp"
         android:text="no msg"
         android:textAppearance="?android:attr/textAppearanceMedium" />
 

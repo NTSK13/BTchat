@@ -3,6 +3,8 @@ package com.exe.btchat;
 import java.util.UUID;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothServerSocket;
 import android.bluetooth.BluetoothSocket;
@@ -15,6 +17,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 public class ServerChatUI extends Activity{
@@ -24,14 +27,22 @@ public class ServerChatUI extends Activity{
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
 	private ChatThread ServerChatThread;
 	private TextView tv_get_msg;
+	private TextView wait_tv;
 	private EditText et_send_msg;
+	private ProgressBar wait_bar;
+	BluetoothSocket current_socket; 
+	
+	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server_chat);
         
+        wait_bar=(ProgressBar)findViewById(R.id.waitBar);
         et_send_msg=(EditText)findViewById(R.id.et_send_msg);
         tv_get_msg=(TextView)findViewById(R.id.tv_get_msg);
+        wait_tv=(TextView)findViewById(R.id.wait_tv);
+        et_send_msg.setEnabled(false);
         myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
         
         Log.v(tag, "open Bt visible");
@@ -39,8 +50,8 @@ public class ServerChatUI extends Activity{
     	Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
     	discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 100);
     	startActivity(discoverableIntent);
-    	
-      //开启服务端线程
+    	    	
+        //开启服务端线程
    	    Thread serverThread=new Thread(new Runnable(){
     	   	@Override
     	    public void run() {
@@ -48,11 +59,11 @@ public class ServerChatUI extends Activity{
     	    		Log.v(tag, "serverThread run ");
     	    		BluetoothServerSocket server_socket=myBtAdapter.listenUsingRfcommWithServiceRecord("myServerSocket", UUID.fromString(string_uuid));
     	    		Log.v(tag, "wait client request");
-    	    		BluetoothSocket current_socket = server_socket.accept();  
-    	    		Log.v(tag, "accepted  client request");
+    	    		    	    		
     	    		
-    	    		ServerChatThread =new ChatThread(current_socket, ServerHandler,false);
-    	    		ServerChatThread.start();
+    	    		current_socket = server_socket.accept();  
+    	    		Log.v(tag, "accepted  client request");
+    	    		ServerHandler.sendEmptyMessage(0x02);
     	    				
     	    	} catch (Exception e) {
     				e.printStackTrace();
@@ -77,6 +88,15 @@ public class ServerChatUI extends Activity{
 				Bundle b=msg.getData();
 				String server_get_msg=b.getString("get_msg");
 				tv_get_msg.setText(server_get_msg);
+			}else if(msg.what==0x02){
+				//可以收发消息
+				wait_bar.setVisibility(View.GONE);
+				wait_tv.setVisibility(View.GONE);
+				et_send_msg.setEnabled(true);
+
+				ServerChatThread =new ChatThread(current_socket, ServerHandler,false);
+	    		ServerChatThread.start();
+				
 			}
     	};
     };
