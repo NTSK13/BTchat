@@ -17,9 +17,9 @@
             android:layout_height="wrap_content"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
-            android:layout_marginRight="8dp"
+            android:layout_marginRight="5dp"
             android:onClick="send_msg_handler"
-            android:text="发送"
+            android:background="@drawable/add"
             tools:ignore="HardcodedText" />
 
         <EditText
@@ -27,8 +27,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginLeft="8dp"
-            android:layout_marginRight="8dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginRight="5dp"
             android:layout_toLeftOf="@id/btn_send"
             android:hint="请输入信息"
             android:singleLine="true"

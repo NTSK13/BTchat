@@ -22,19 +22,21 @@ public final class R {
         public static final int activity_vertical_margin=0x7f040001;
     }
     public static final class drawable {
-        public static final int chat_bottom_send_normal=0x7f020000;
-        public static final int chat_bottom_send_pressed=0x7f020001;
-        public static final int chatfrom_bg=0x7f020002;
-        public static final int chatfrom_bg_focused=0x7f020003;
-        public static final int chatfrom_bg_normal=0x7f020004;
-        public static final int chatfrom_bg_pressed=0x7f020005;
-        public static final int chatto_bg=0x7f020006;
-        public static final int chatto_bg_focused=0x7f020007;
-        public static final int chatto_bg_normal=0x7f020008;
-        public static final int chatto_bg_pressed=0x7f020009;
-        public static final int ic_launcher=0x7f02000a;
-        public static final int my_face=0x7f02000b;
-        public static final int your_face=0x7f02000c;
+        public static final int add=0x7f020000;
+        public static final int add2=0x7f020001;
+        public static final int chat_bottom_send_normal=0x7f020002;
+        public static final int chat_bottom_send_pressed=0x7f020003;
+        public static final int chatfrom_bg=0x7f020004;
+        public static final int chatfrom_bg_focused=0x7f020005;
+        public static final int chatfrom_bg_normal=0x7f020006;
+        public static final int chatfrom_bg_pressed=0x7f020007;
+        public static final int chatto_bg=0x7f020008;
+        public static final int chatto_bg_focused=0x7f020009;
+        public static final int chatto_bg_normal=0x7f02000a;
+        public static final int chatto_bg_pressed=0x7f02000b;
+        public static final int ic_launcher=0x7f02000c;
+        public static final int my_face=0x7f02000d;
+        public static final int your_face=0x7f02000e;
     }
     public static final class id {
         public static final int action_settings=0x7f08000b;

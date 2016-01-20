@@ -33,12 +33,12 @@ import android.widget.Toast;
 
 
 public class ChatActivity extends Activity {
-
 	private String tag="wei";
 	private BluetoothAdapter myBtAdapter;
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
 	private BluetoothSocket server_socket; 
 	private BluetoothSocket client_socket; 
+	BluetoothServerSocket server_bt_socket;
 	
 	private ListView lv;
 	private Button bsend_msg;
@@ -72,7 +72,6 @@ public class ChatActivity extends Activity {
     private String your_device_name;  
     
     ChatMsgViewAdapter mListViewAdapter;
-
     
 	public ArrayList<BluetoothDevice>  find_device_list;
 	public ArrayList<BluetoothDevice>  bonded_device_list;
@@ -80,7 +79,11 @@ public class ChatActivity extends Activity {
 	private ArrayAdapter<String> bonded_device_name_adapter;
 	private Set<BluetoothDevice> pairedDevices;
 	public BluetoothDevice target_device=null;
-    
+	
+	private int bonded_item_position=0;
+	private boolean bonded_item_selected=false;
+	private int founded_item_position=0;
+	private boolean founded_item_selected=false;
 	
     private Handler chat_handler=new Handler(){
 
@@ -88,7 +91,7 @@ public class ChatActivity extends Activity {
 		public void handleMessage(Message msg) {
 			// TODO Auto-generated method stub
 			//super.handleMessage(msg);
-			
+
 			switch (msg.what) {
 				case client_msg_get:
 					Log.v(tag, "client  get msg");
@@ -202,11 +205,8 @@ public class ChatActivity extends Activity {
     }
     
     public void request_connect_handler(View v){
-    	
-    	Toast.makeText(this, "request connect others device", Toast.LENGTH_LONG).show();
     	is_client=true;
     	init();
-    	
     	 //start chat
         get_Bonded_device_and_chat();
         
@@ -215,7 +215,6 @@ public class ChatActivity extends Activity {
     }
          
     public void wait_connect_handler(View v){
-    	Toast.makeText(this, "wait others device request", Toast.LENGTH_LONG).show();
     	enable_my_device_visible();
     	is_client=false;
     	//开启服务端线程
@@ -224,7 +223,7 @@ public class ChatActivity extends Activity {
     	    public void run() {
     	    	try {
     	    		Log.v(tag, "serverThread run ");
-    	    		BluetoothServerSocket server_bt_socket=myBtAdapter.listenUsingRfcommWithServiceRecord("myServerSocket", UUID.fromString(string_uuid));
+    	    		server_bt_socket=myBtAdapter.listenUsingRfcommWithServiceRecord("myServerSocket", UUID.fromString(string_uuid));
     	    		Log.v(tag, "wait client request");
     	    		    	    		
     	    		server_socket = server_bt_socket.accept();  
@@ -257,7 +256,6 @@ public class ChatActivity extends Activity {
         lv.setVisibility(View.INVISIBLE);
         bsend_msg.setVisibility(View.INVISIBLE);
         et_send_msg.setVisibility(View.INVISIBLE);
-         
           
         //enable BT 
         myBtAdapter=BluetoothAdapter.getDefaultAdapter();//get local BT adapter
@@ -268,7 +266,6 @@ public class ChatActivity extends Activity {
         lv.setAdapter(mListViewAdapter);
         register_myBTReceiver();
     }
-
 
     private void  enable_my_device(){
 
@@ -288,7 +285,7 @@ public class ChatActivity extends Activity {
     }
     
     private void enable_my_device_visible(){
-    	Log.v(tag, "open Bt visible");
+    	Log.v(tag, "enable Bt visible");
     	//可见120s
     	Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
     	discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
@@ -296,7 +293,7 @@ public class ChatActivity extends Activity {
     }
     
     private void register_myBTReceiver(){
-    	/***********************注册BT广播接收器*************************/
+    	/***********************注册BT广播接收器************************/
         IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter);
     }
@@ -322,6 +319,7 @@ public class ChatActivity extends Activity {
     	};
     };
     
+    
 	@Override
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
@@ -330,7 +328,30 @@ public class ChatActivity extends Activity {
 		if(mReceiver !=null){
 			unregisterReceiver(mReceiver);
 		}
+		
+		if(is_client){
+			try {
+				client_socket.close();
+			
+				ClientChatThread.destroy();
+			    clientThread.destroy();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		      
+		}else{
+			try {
+				server_socket.close(); 
+				server_bt_socket.close();
+				ServerChatThread.destroy();
+			    serverThread.destroy();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		
 	}
+
 
     private void init(){
 
@@ -361,6 +382,16 @@ public class ChatActivity extends Activity {
 			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
 				Toast.makeText(ChatActivity.this, "确定", Toast.LENGTH_SHORT).show();
+				Log.v(tag, "founded_item_position="+founded_item_position);
+				if(founded_item_selected==false){
+					founded_item_position=0;
+					//取消蓝牙扫描
+	            	myBtAdapter.cancelDiscovery();
+				}
+				founded_item_selected=false;
+				target_device=(BluetoothDevice)find_device_list.get(founded_item_position);
+            	your_device_name=target_device.getName();
+            	
                 Log.v(tag, "pairing ...");
     			target_device.createBond();
     			myTimer=new Timer();
@@ -381,11 +412,9 @@ public class ChatActivity extends Activity {
 			public void onClick(DialogInterface arg0, int position) {
 				//取消蓝牙扫描
             	myBtAdapter.cancelDiscovery();
-				Toast.makeText(ChatActivity.this, "选择: "+position, Toast.LENGTH_SHORT).show();
 				Log.v(tag, "get target_device position is: "+position);
-            	target_device=(BluetoothDevice)find_device_list.get(position);
-            	your_device_name=target_device.getName();
-            	
+				founded_item_position=position;
+				founded_item_selected=true;
 			}
 		});
         myDialog.show();       
@@ -414,7 +443,16 @@ public class ChatActivity extends Activity {
          myBondedDialog.setPositiveButton("开始聊天", new OnClickListener() {
  			@Override
  			public void onClick(DialogInterface arg0, int arg1) {
- 				Toast.makeText(ChatActivity.this, "确定", Toast.LENGTH_SHORT).show();
+ 				Toast.makeText(ChatActivity.this, "开始聊天-确定", Toast.LENGTH_SHORT).show();
+ 				Log.v(tag, "bonded_item_position="+bonded_item_position);
+ 				if(bonded_item_selected==false){
+ 					bonded_item_position=0;
+ 				}
+ 				bonded_item_selected=false;
+ 				target_device=(BluetoothDevice) bonded_device_list.get(bonded_item_position);
+             	Log.v(tag, "target_device name is: "+target_device.getName());
+               	your_device_name=target_device.getName();
+               	
  				chat_handler.sendEmptyMessage(client_ready);
  			}
  		});
@@ -422,11 +460,9 @@ public class ChatActivity extends Activity {
          myBondedDialog.setSingleChoiceItems(bonded_device_name_adapter, 0, new OnClickListener() {
  			@Override
  			public void onClick(DialogInterface arg0, int position) {
- 				Toast.makeText(ChatActivity.this, "选择: "+position, Toast.LENGTH_SHORT).show();
  				Log.v(tag, "get target_device position is: "+position);
-             	target_device=(BluetoothDevice) bonded_device_list.get(position);
-             	Log.v(tag, "target_device name is: "+target_device.getName());
-               	your_device_name=target_device.getName();
+             	bonded_item_position=position;
+             	bonded_item_selected=true;
  			}
  		});
          myBondedDialog.show(); 
