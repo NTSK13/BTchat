@@ -33,6 +33,7 @@ import android.widget.Toast;
 
 
 public class ChatActivity extends Activity {
+
 	private String tag="wei";
 	private BluetoothAdapter myBtAdapter;
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
@@ -48,22 +49,27 @@ public class ChatActivity extends Activity {
 	
 
     private final int request_visibility_item_id=0x100;
-
+    private final int FB_REQUEST_CODE=0x01;
+    private final int FB_RESULT_CODE=0x02;
     private final int client_ready2=0x01;
     private final int client_msg_get=0x02;
     private final int client_ready=0x03;
     private final int server_msg_get=0x12;
     private final int server_ready=0x13;
+    private final int rev_file_finished=0x22;
     
     private String send_msg;
     private boolean is_client=false;
 	private boolean is_from_search_device=false;
+	
+	private String file_path;
 	
     private Thread serverThread;
     private Thread clientThread;
 	private Timer myTimer=null;
     private ChatThread ServerChatThread;
     private ChatThread ClientChatThread;
+    private BluetoothSocket target_socket;
     
     private ChatMsgEntity Myentity = new ChatMsgEntity();
     private ChatMsgEntity Yourentity = new ChatMsgEntity();
@@ -93,10 +99,15 @@ public class ChatActivity extends Activity {
 			//super.handleMessage(msg);
 
 			switch (msg.what) {
+				case rev_file_finished:
+					Bundle b_rev_name=msg.getData();
+	  				String rev_name=b_rev_name.getString("rev_name");
+					Toast.makeText(ChatActivity.this, "接收完成,文件位于: "+rev_name, Toast.LENGTH_LONG).show();
+					break;
 				case client_msg_get:
 					Log.v(tag, "client  get msg");
-	  				Bundle b=msg.getData();
-	  				String client_get_msg=b.getString("get_msg");
+	  				Bundle b_client_msg_get=msg.getData();
+	  				String client_get_msg=b_client_msg_get.getString("get_msg");
 	  				 Yourentity.setDate(Yourentity.getDate());
 				     Yourentity.setText(client_get_msg);
 				     Yourentity.setName(your_device_name);
@@ -129,7 +140,7 @@ public class ChatActivity extends Activity {
 	            					Log.v(tag, "client socket close");
 	            					current_socket.close();
 	            				}*/
-	            				
+	            				target_socket=client_socket;
 	            				chat_handler.sendEmptyMessage(client_ready2);
 	              					
 	            			} catch (Exception e) {
@@ -186,8 +197,43 @@ public class ChatActivity extends Activity {
     	
     };
 	
-    public void send_msg_handler(View v){
+    public void et_send_click_handler(View v){
+    	bsend_msg.setBackgroundResource(R.drawable.send);
+    }
+    
+    
+    @Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+		// TODO Auto-generated method stub
+		super.onActivityResult(requestCode, resultCode, intent);
+		if(requestCode==FB_REQUEST_CODE && resultCode ==RESULT_OK){
+			String file_name=intent.getStringExtra("fileName");
+			file_path=intent.getStringExtra("filePath");
+
+			Log.v(tag, "file_path:"+file_path);
+			Log.v(tag, "file_name:"+file_name);
+			//send file by BT
+			if(is_client){
+				ClientChatThread.transfer(file_path, file_name);
+			}else{
+				ServerChatThread.transfer(file_path, file_name);
+			}
+
+		}else if( resultCode ==RESULT_CANCELED){
+			Log.v(tag,"you cancel transfer files");
+		}
+		
+	}
+
+
+	public void send_msg_handler(View v){
     	send_msg=et_send_msg.getText().toString().trim();
+		if(send_msg.equals("")){
+			Intent it=new Intent();
+			it.setAction("android.intent.action.FileBrowser");
+			
+			startActivityForResult(it, FB_REQUEST_CODE);	
+		}
 		
         Myentity.setDate(Myentity.getDate());
         Myentity.setText(send_msg);
@@ -199,9 +245,9 @@ public class ChatActivity extends Activity {
 			ClientChatThread.write(send_msg);
 		}else{
 			ServerChatThread.write(send_msg);
-
 		}
 		et_send_msg.setText("");
+		bsend_msg.setBackgroundResource(R.drawable.add);
     }
     
     public void request_connect_handler(View v){
@@ -228,6 +274,7 @@ public class ChatActivity extends Activity {
     	    		    	    		
     	    		server_socket = server_bt_socket.accept();  
     	    		Log.v(tag, "accepted  client request");
+    	    		target_socket=server_socket;
     	    		chat_handler.sendEmptyMessage(server_ready);
     	    				
     	    	} catch (Exception e) {

@@ -23,39 +23,46 @@ public final class R {
     }
     public static final class drawable {
         public static final int add=0x7f020000;
-        public static final int add2=0x7f020001;
-        public static final int chat_bottom_send_normal=0x7f020002;
-        public static final int chat_bottom_send_pressed=0x7f020003;
-        public static final int chatfrom_bg=0x7f020004;
-        public static final int chatfrom_bg_focused=0x7f020005;
-        public static final int chatfrom_bg_normal=0x7f020006;
-        public static final int chatfrom_bg_pressed=0x7f020007;
-        public static final int chatto_bg=0x7f020008;
-        public static final int chatto_bg_focused=0x7f020009;
-        public static final int chatto_bg_normal=0x7f02000a;
-        public static final int chatto_bg_pressed=0x7f02000b;
-        public static final int ic_launcher=0x7f02000c;
-        public static final int my_face=0x7f02000d;
-        public static final int your_face=0x7f02000e;
+        public static final int chat_bottom_send_normal=0x7f020001;
+        public static final int chat_bottom_send_pressed=0x7f020002;
+        public static final int chatfrom_bg=0x7f020003;
+        public static final int chatfrom_bg_focused=0x7f020004;
+        public static final int chatfrom_bg_normal=0x7f020005;
+        public static final int chatfrom_bg_pressed=0x7f020006;
+        public static final int chatto_bg=0x7f020007;
+        public static final int chatto_bg_focused=0x7f020008;
+        public static final int chatto_bg_normal=0x7f020009;
+        public static final int chatto_bg_pressed=0x7f02000a;
+        public static final int file=0x7f02000b;
+        public static final int folder=0x7f02000c;
+        public static final int ic_launcher=0x7f02000d;
+        public static final int my_face=0x7f02000e;
+        public static final int send=0x7f02000f;
+        public static final int your_face=0x7f020010;
     }
     public static final class id {
-        public static final int action_settings=0x7f08000b;
+        public static final int action_settings=0x7f08000e;
         public static final int btn_send=0x7f080001;
         public static final int chat_list_view=0x7f080006;
         public static final int et_sendmsg=0x7f080002;
-        public static final int iv_userhead=0x7f080008;
+        public static final int file_name=0x7f08000d;
+        public static final int icon=0x7f08000c;
+        public static final int iv_userhead=0x7f080009;
+        public static final int listView=0x7f080007;
         public static final int request_connect=0x7f080004;
         public static final int rl_bottom=0x7f080000;
         public static final int rl_top=0x7f080003;
-        public static final int tv_chatcontent=0x7f080009;
-        public static final int tv_sendtime=0x7f080007;
-        public static final int tv_username=0x7f08000a;
+        public static final int tv_chatcontent=0x7f08000a;
+        public static final int tv_sendtime=0x7f080008;
+        public static final int tv_username=0x7f08000b;
         public static final int wait_connect=0x7f080005;
     }
     public static final class layout {
         public static final int activity_chat=0x7f030000;
-        public static final int chatting_item_msg_text_left=0x7f030001;
-        public static final int chatting_item_msg_text_right=0x7f030002;
+        public static final int activity_filebrowser=0x7f030001;
+        public static final int chatting_item_msg_text_left=0x7f030002;
+        public static final int chatting_item_msg_text_right=0x7f030003;
+        public static final int line=0x7f030004;
     }
     public static final class menu {
         public static final int chat=0x7f070000;

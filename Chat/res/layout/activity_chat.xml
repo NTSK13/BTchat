@@ -13,11 +13,11 @@
 
         <Button
             android:id="@+id/btn_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
-            android:layout_marginRight="5dp"
+            android:layout_marginRight="1dp"
             android:onClick="send_msg_handler"
             android:background="@drawable/add"
             tools:ignore="HardcodedText" />
@@ -27,10 +27,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
-            android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
+            android:layout_marginLeft="1dp"
+            android:onClick="et_send_click_handler"
             android:layout_toLeftOf="@id/btn_send"
-            android:hint="请输入信息"
+            android:hint="请输入消息"
             android:singleLine="true"
             android:textSize="18sp"
             tools:ignore="HardcodedText" />
@@ -41,28 +41,30 @@
         android:layout_width="fill_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentTop="true"
-        android:layout_marginTop="150dp">
+        android:layout_marginTop="150dp"
+         android:gravity="center_horizontal" 
+         >
         <Button
             android:id="@+id/request_connect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:layout_marginRight="8dp"
             android:onClick="request_connect_handler"
             android:text="请求连接其他设备"
+            android:textSize="14sp"
             tools:ignore="HardcodedText" />
         <Button
             android:id="@+id/wait_connect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-
             android:layout_alignParentRight="true"
             android:layout_centerVertical="true"
             android:layout_marginRight="8dp"
             android:onClick="wait_connect_handler"
             android:text="等待其他设备连接"
+            android:textSize="14sp"
             tools:ignore="HardcodedText" />
     </LinearLayout>
     <ListView
