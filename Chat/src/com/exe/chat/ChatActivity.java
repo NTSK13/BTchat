@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -46,7 +47,10 @@ public class ChatActivity extends Activity {
 	private Button bRequest_connect;
 	private Button bWait_connect;
 	private EditText et_send_msg;
-	
+	private ProgressDialog transfer_progressDiag;
+	private long transfer_progressStatus=0;
+	private ProgressDialog receive_progressDiag;
+	private long receive_progressStatus=0;
 
     private final int request_visibility_item_id=0x100;
     private final int FB_REQUEST_CODE=0x01;
@@ -57,12 +61,21 @@ public class ChatActivity extends Activity {
     private final int server_msg_get=0x12;
     private final int server_ready=0x13;
     private final int rev_file_finished=0x22;
+    private final int update_transfer_progress=0x23;
+    private final int start_receive_file=0x24;
+    private final int update_receive_progress=0x25;
+    
+    private final int start_transfer_file=0x26;
+    private final int ask_if_accept=0x27;
+    private final int response_if_accept=0x28;
     
     private String send_msg;
     private boolean is_client=false;
 	private boolean is_from_search_device=false;
 	
-	private String file_path;
+	private String send_file_path;
+	private String send_file_name;
+	private long send_file_size;
 	
     private Thread serverThread;
     private Thread clientThread;
@@ -105,7 +118,7 @@ public class ChatActivity extends Activity {
 					Toast.makeText(ChatActivity.this, "接收完成,文件位于: "+rev_name, Toast.LENGTH_LONG).show();
 					break;
 				case client_msg_get:
-					Log.v(tag, "client  get msg");
+					Log.e(tag, "client  get msg");
 	  				Bundle b_client_msg_get=msg.getData();
 	  				String client_get_msg=b_client_msg_get.getString("get_msg");
 	  				 Yourentity.setDate(Yourentity.getDate());
@@ -129,15 +142,15 @@ public class ChatActivity extends Activity {
 	                clientThread=new Thread(new Runnable(){
 	            		@Override
 	            		public void run() {
-	            			Log.v(tag, "clientThread run ");
+	            			Log.e(tag, "clientThread run ");
 	            			try {
 	            				client_socket =target_device.createRfcommSocketToServiceRecord(UUID.fromString(string_uuid));
-	            				Log.v(tag, "clientThread wait connect ");
+	            				Log.e(tag, "clientThread wait connect ");
 	            				client_socket.connect();
 	            					
-	            				Log.v(tag, "clientThread  connected ");
+	            				Log.e(tag, "clientThread  connected ");
 	            				/*if(current_socket !=null){
-	            					Log.v(tag, "client socket close");
+	            					Log.e(tag, "client socket close");
 	            					current_socket.close();
 	            				}*/
 	            				target_socket=client_socket;
@@ -179,8 +192,7 @@ public class ChatActivity extends Activity {
 				     mListViewAdapter.notifyDataSetChanged();
 				     lv.setSelection(mListViewAdapter.getCount() - 1);
 	
-					break;
-					
+					break;			
 				case server_ready:
 					ServerChatThread =new ChatThread(server_socket, chat_handler,false);
 		    		ServerChatThread.start();
@@ -188,7 +200,105 @@ public class ChatActivity extends Activity {
 		    		lv.setVisibility(View.VISIBLE);
 		            bsend_msg.setVisibility(View.VISIBLE);
 		            et_send_msg.setVisibility(View.VISIBLE);
-		            
+					break;
+				case update_transfer_progress :
+					
+					Bundle b_transfer_progress=msg.getData();
+					transfer_progressStatus=b_transfer_progress.getLong("hasTransfered");
+					Log.e(tag,"fileSize : "+send_file_size+" ,transfer_progressStatus : "+transfer_progressStatus);
+					transfer_progressDiag.setMax((int)send_file_size);
+					
+					Log.e(tag,"ChatActivity update transfer progress,transfer_progressStatus= "+transfer_progressStatus);
+					if( transfer_progressStatus >= (send_file_size-1000)){
+						transfer_progressDiag.dismiss();
+						break;
+					}
+				
+					transfer_progressDiag.setProgress((int)transfer_progressStatus  );
+					break;
+				case start_receive_file:
+					receive_progressDiag=new ProgressDialog(ChatActivity.this);
+					
+					receive_progressDiag.setTitle("接收进度");
+					receive_progressDiag.setCancelable(false);
+					receive_progressDiag.setIndeterminate(false);
+					receive_progressDiag.setMessage("接收完成百分比:");
+					receive_progressDiag.setProgress(0);
+					receive_progressDiag.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+					receive_progressDiag.show();
+					break;
+				case update_receive_progress:
+					Bundle b_receive_progress=msg.getData();
+					receive_progressStatus=b_receive_progress.getLong("hasReceived");
+					long receive_file_size=b_receive_progress.getLong("receive_file_size");
+					receive_progressDiag.setMax(  (int)receive_file_size);
+					Log.e(tag,"ChatActivity fileSize : "+receive_file_size+" ,receive_progressStatus : "+receive_progressStatus);
+					//receive_progressStatus=receive_progressStatus *100 / receive_file_size ;
+					Log.e(tag,"update receive progress,receive_progressStatus= "+receive_progressStatus);
+					if( receive_progressStatus >= ((int)receive_file_size-1000)){
+						receive_progressDiag.dismiss();
+						break;
+					}
+				
+					receive_progressDiag.setProgress((int)receive_progressStatus  );
+					break;
+					
+				case start_transfer_file:
+					transfer_progressDiag.show();
+					new Thread(new Runnable() {
+						@Override
+						public void run() {
+							//send file by BT
+							if(is_client){
+								ClientChatThread.transfer(send_file_path, send_file_name,send_file_size);
+							}else{
+								ServerChatThread.transfer(send_file_path, send_file_name,send_file_size);
+							}
+						}
+					}).start(); 
+					break;
+				case ask_if_accept:
+					Bundle b_ask_name=msg.getData();
+					String ask_name=b_ask_name.getString("ask_name");
+					
+					AlertDialog.Builder ask_accept_Dialog=new AlertDialog.Builder(ChatActivity.this);
+			        ask_accept_Dialog.setTitle("传输请求");
+			        ask_accept_Dialog.setMessage("对方想发送"+ask_name+" 给你,是否接收 ?");
+			        
+			        ask_accept_Dialog.setCancelable(false);
+			        
+			        ask_accept_Dialog.setNegativeButton("取消", new OnClickListener(){
+						@Override
+						public void onClick(DialogInterface arg0, int arg1) {
+							Toast.makeText(ChatActivity.this, "取消", Toast.LENGTH_SHORT).show();	
+							if(is_client){
+								ClientChatThread.write("ask_accept@#cancel");
+							}else{
+								ServerChatThread.write("ask_accept@#cancel");
+							}
+						}
+			        });
+			        
+			        ask_accept_Dialog.setPositiveButton("接收", new OnClickListener() {
+						@Override
+						public void onClick(DialogInterface arg0, int arg1) {
+							Toast.makeText(ChatActivity.this, "确定接收", Toast.LENGTH_SHORT).show();
+							if(is_client){
+								ClientChatThread.write("ask_accept@#accept");
+							}else{
+								ServerChatThread.write("ask_accept@#accept");
+							}
+						}
+					});
+			        ask_accept_Dialog.show();     
+					
+					break;
+				case response_if_accept:
+					Bundle b_response_if_accept=msg.getData();
+					String response_result=b_response_if_accept.getString("response_result");
+					if(response_result.equals("accept")){
+						chat_handler.sendEmptyMessage(start_transfer_file); 
+					}
 					break;
 				default:
 				break;
@@ -206,21 +316,34 @@ public class ChatActivity extends Activity {
 	protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
 		// TODO Auto-generated method stub
 		super.onActivityResult(requestCode, resultCode, intent);
+		Log.e(tag, "onActivityResult");
+				
+		transfer_progressDiag=new ProgressDialog(this);
+		
+		transfer_progressDiag.setTitle("发送进度");
+		transfer_progressDiag.setCancelable(false);
+		transfer_progressDiag.setIndeterminate(false);
+		transfer_progressDiag.setMessage("发送完成百分比:");
+		transfer_progressDiag.setProgress(0);
+		transfer_progressDiag.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+		
 		if(requestCode==FB_REQUEST_CODE && resultCode ==RESULT_OK){
-			String file_name=intent.getStringExtra("fileName");
-			file_path=intent.getStringExtra("filePath");
-
-			Log.v(tag, "file_path:"+file_path);
-			Log.v(tag, "file_name:"+file_name);
-			//send file by BT
+			Log.e(tag, "prepare transfer");
+			send_file_name=intent.getStringExtra("fileName");
+			send_file_path=intent.getStringExtra("filePath");
+			send_file_size=intent.getLongExtra("fileSize", 0);
+			
+			Log.e(tag, "file_path:"+send_file_path+" , file_name : "+send_file_name);
+			// ask opposite side accept file
+			String encode_ask_send_file_name=send_file_name+"@#filename@#ask";
 			if(is_client){
-				ClientChatThread.transfer(file_path, file_name);
+				ClientChatThread.write(encode_ask_send_file_name);
 			}else{
-				ServerChatThread.transfer(file_path, file_name);
+				ServerChatThread.write(encode_ask_send_file_name);
 			}
 
 		}else if( resultCode ==RESULT_CANCELED){
-			Log.v(tag,"you cancel transfer files");
+			Log.e(tag,"you cancel transfer files");
 		}
 		
 	}
@@ -268,12 +391,12 @@ public class ChatActivity extends Activity {
     	   	@Override
     	    public void run() {
     	    	try {
-    	    		Log.v(tag, "serverThread run ");
+    	    		Log.e(tag, "serverThread run ");
     	    		server_bt_socket=myBtAdapter.listenUsingRfcommWithServiceRecord("myServerSocket", UUID.fromString(string_uuid));
-    	    		Log.v(tag, "wait client request");
+    	    		Log.e(tag, "wait client request");
     	    		    	    		
     	    		server_socket = server_bt_socket.accept();  
-    	    		Log.v(tag, "accepted  client request");
+    	    		Log.e(tag, "accepted  client request");
     	    		target_socket=server_socket;
     	    		chat_handler.sendEmptyMessage(server_ready);
     	    				
@@ -317,7 +440,7 @@ public class ChatActivity extends Activity {
     private void  enable_my_device(){
 
          try {
- 			Log.v(tag, "Get BT adapter");
+ 			Log.e(tag, "Get BT adapter");
  			if(! myBtAdapter.isEnabled()){// 如果没有打开蓝牙,那么打开蓝牙
  				//弹出对话框,提示用户打开蓝牙
  				//Intent it =new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -332,7 +455,7 @@ public class ChatActivity extends Activity {
     }
     
     private void enable_my_device_visible(){
-    	Log.v(tag, "enable Bt visible");
+    	Log.e(tag, "enable Bt visible");
     	//可见120s
     	Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
     	discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 120);
@@ -354,7 +477,7 @@ public class ChatActivity extends Activity {
         		if(BluetoothDevice.ACTION_FOUND.equals(action)  ){
         			BluetoothDevice device=it.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
         			//if(device.getBondState() != BluetoothDevice.BOND_BONDED){
-        			Log.v(tag, "Find device: "+device.getName()+",Device address is :"+device.getAddress() );
+        			Log.e(tag, "Find device: "+device.getName()+",Device address is :"+device.getAddress() );
         			if(! device.getName().equals(null)){
         				find_device_list.add(device);
         				find_device_name_adapter.add(device.getName());  
@@ -371,7 +494,7 @@ public class ChatActivity extends Activity {
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		super.onDestroy();
-		Log.v(tag, "onDestroy start");
+		Log.e(tag, "onDestroy start");
 		if(mReceiver !=null){
 			unregisterReceiver(mReceiver);
 		}
@@ -409,7 +532,7 @@ public class ChatActivity extends Activity {
    }
     
     private void search_device_and_chat(){
-    	Log.v(tag, "start search...");
+    	Log.e(tag, "start search...");
         myBtAdapter.startDiscovery();//search
         Toast.makeText(this, "搜索蓝牙设备中 ...", Toast.LENGTH_LONG).show();
     	
@@ -417,7 +540,7 @@ public class ChatActivity extends Activity {
         AlertDialog.Builder myDialog=new AlertDialog.Builder(this);
         myDialog.setTitle("BT搜索结果");
         myDialog.setCancelable(false);
-        
+
         myDialog.setNegativeButton("取消", new OnClickListener(){
 			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
@@ -429,7 +552,7 @@ public class ChatActivity extends Activity {
 			@Override
 			public void onClick(DialogInterface arg0, int arg1) {
 				Toast.makeText(ChatActivity.this, "确定", Toast.LENGTH_SHORT).show();
-				Log.v(tag, "founded_item_position="+founded_item_position);
+				Log.e(tag, "founded_item_position="+founded_item_position);
 				if(founded_item_selected==false){
 					founded_item_position=0;
 					//取消蓝牙扫描
@@ -439,7 +562,7 @@ public class ChatActivity extends Activity {
 				target_device=(BluetoothDevice)find_device_list.get(founded_item_position);
             	your_device_name=target_device.getName();
             	
-                Log.v(tag, "pairing ...");
+                Log.e(tag, "pairing ...");
     			target_device.createBond();
     			myTimer=new Timer();
     			myTimer.schedule(new TimerTask() {
@@ -459,7 +582,7 @@ public class ChatActivity extends Activity {
 			public void onClick(DialogInterface arg0, int position) {
 				//取消蓝牙扫描
             	myBtAdapter.cancelDiscovery();
-				Log.v(tag, "get target_device position is: "+position);
+				Log.e(tag, "get target_device position is: "+position);
 				founded_item_position=position;
 				founded_item_selected=true;
 			}
@@ -491,13 +614,13 @@ public class ChatActivity extends Activity {
  			@Override
  			public void onClick(DialogInterface arg0, int arg1) {
  				Toast.makeText(ChatActivity.this, "开始聊天-确定", Toast.LENGTH_SHORT).show();
- 				Log.v(tag, "bonded_item_position="+bonded_item_position);
+ 				Log.e(tag, "bonded_item_position="+bonded_item_position);
  				if(bonded_item_selected==false){
  					bonded_item_position=0;
  				}
  				bonded_item_selected=false;
  				target_device=(BluetoothDevice) bonded_device_list.get(bonded_item_position);
-             	Log.v(tag, "target_device name is: "+target_device.getName());
+             	Log.e(tag, "target_device name is: "+target_device.getName());
                	your_device_name=target_device.getName();
                	
  				chat_handler.sendEmptyMessage(client_ready);

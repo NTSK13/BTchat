@@ -51,7 +51,7 @@ public class FileBrowserActivity extends Activity {
 		lv=(ListView)findViewById(R.id.listView);
 		//root_dir=Environment.getExternalStorageDirectory().getAbsolutePath();
 		root_dir=new String("/storage/emulated/0/");
-		Log.v(tag, root_dir);
+		
 		File root=new File(root_dir);
 		if(root.exists()){
 			Log.v(tag, root_dir +"  is exist");
@@ -66,24 +66,18 @@ public class FileBrowserActivity extends Activity {
 			{
 				if( currentFiles[position].isFile() )//it is a file
 				{
-					Log.v(tag,currentFiles[position].getName());
-					Log.v(tag,currentFiles[position].getAbsolutePath());
 					//return file name and file path
 					Intent it= new Intent();
-					Log.v(tag, "send file info to chat");
 					it.putExtra("filePath", currentFiles[position].getAbsolutePath());
 					it.putExtra("fileName", currentFiles[position].getName());
-					
+					it.putExtra("fileSize", currentFiles[position].length() );
+	
 					setResult(RESULT_OK, it);
-				
 					finish();
-					return;
 				}
 				
 				File[] tmp=currentFiles[position].listFiles();
-				if( tmp==null || tmp.length==0){
-					Toast.makeText(FileBrowserActivity.this, "当前路径不可访问 或 路径下没有文件", Toast.LENGTH_LONG).show();
-				}else{
+				if( tmp !=null && tmp.length!=0){
 					currentParentPath=currentFiles[position];
 					currentFiles=tmp;
 					inflateListView(currentFiles);
@@ -96,7 +90,7 @@ public class FileBrowserActivity extends Activity {
 	private void inflateListView(File[] files)
 	{
 		List<Map<String, Object>> listItems=new ArrayList<Map<String, Object>>();
-		Log.v(tag, " enter  inflateListView ");
+		//Log.v(tag, " enter  inflateListView ");
 		for(int i=0;i< files.length;i++){
 			Map<String, Object> listItem=new HashMap<String,Object>();
 			
