@@ -30,16 +30,19 @@ public class ChatThread extends Thread{
 	private long hasTransfered=0;
 	private boolean is_transfer=false;
 	private int transfer_rev_count=0;
-	private boolean is_transfer_finished=false;
+
 	private final int client_msg_get=0x02;
     private final int server_msg_get=0x12;
     private final int rev_file_finished=0x22;
     private final int update_transfer_progress=0x23;
     private final int start_receive_file=0x24;
     private final int update_receive_progress=0x25;
-    private final int start_transfer_file=0x26;
+
     private final int ask_if_accept=0x27;
     private final int response_if_accept=0x28;
+    
+    private final int target_socket_disconnect=0x30;
+    
     private long receive_file_size;
 	
 	public ChatThread(BluetoothSocket socket, Handler handler, boolean isc)
@@ -72,7 +75,7 @@ public class ChatThread extends Thread{
 	               bytes = mInStream.read(buffer);     
 	               get_msg = new String(buffer, 0, bytes);
 	               Log.e(tag, "run_msg is :"+get_msg);
-	               
+	 
 	               if(get_msg.startsWith("ask_accept@#")){ // response
 	            	   Log.e(tag, "response_if_accept ");
             	       String sresult=get_msg.split("@#")[1];
@@ -85,7 +88,7 @@ public class ChatThread extends Thread{
 	       
 	            	   mHandler.sendMessage(msg);
 	            	   continue;
-               }
+	               }
 	               
 	               if(get_msg.endsWith("@#filename@#ask")){//ask
 	            	   Log.e(tag, "ask_if_accept ");
@@ -133,7 +136,7 @@ public class ChatThread extends Thread{
 	            	   continue;
 	               }
 	               
-	               Log.e(tag, "is_transfer : "+is_transfer+" , transfer_rev_count: "+transfer_rev_count);
+	               //Log.e(tag, "is_transfer : "+is_transfer+" , transfer_rev_count: "+transfer_rev_count);
 	               if(is_transfer ==false ){// receive a  msg
 	            	   Log.e(tag, "receive a msg ");
 	            	   Message msg=new Message();
@@ -153,20 +156,26 @@ public class ChatThread extends Thread{
 	            	   outs.write(buffer, 0, bytes);
 	            	   hasReceived +=bytes;
 		               transfer_rev_count++;
-		               //if(transfer_rev_count %10==0){
-		            	   Message msg=new Message();
-						   Bundle b=new Bundle();
-		            	   b.putLong("hasReceived", hasReceived);
-		            	   b.putLong("receive_file_size", receive_file_size);
-		            	   msg.setData(b);
-			         	   msg.what=update_receive_progress;
-		            	   mHandler.sendMessage(msg);
-		              // }
+		         
+		               Message msg=new Message();
+					   Bundle b=new Bundle();
+		               b.putLong("hasReceived", hasReceived);
+		               b.putLong("receive_file_size", receive_file_size);
+		               msg.setData(b);
+			           msg.what=update_receive_progress;
+		               mHandler.sendMessage(msg);
+		               continue;
 	               }    
 	               
 	            } catch (IOException e) {
+	            	Log.e(tag,"run   IOException");
+	            	mHandler.sendEmptyMessage(target_socket_disconnect);
 	            	e.printStackTrace();
-	                break;
+	            	break;
+	            }catch(Exception e){
+	            	Log.e(tag,"run   Exception");
+	            	e.printStackTrace();
+	            	break;
 	            }
 	        }
 	    }
@@ -185,9 +194,9 @@ public class ChatThread extends Thread{
 		 String fname=fileName+"@#"+stmp+"@#filename@#send";
 		 String fileEnd=fileName+"@#fileFinish#@";
 		 try {
-			Log.e(tag, "transfer file is :"+filePath);
-			Log.e(tag, "transfer file name is :"+fileName);
-			Log.e(tag, "encode file name is :"+fname);
+			//Log.e(tag, "transfer file is :"+filePath);
+			//Log.e(tag, "transfer file name is :"+fileName);
+			//Log.e(tag, "encode file name is :"+fname);
 			mOutStream.write(fname.getBytes());
 			mOutStream.flush();
 			try {
@@ -212,7 +221,7 @@ public class ChatThread extends Thread{
 	            	   b.putLong("hasTransfered", hasTransfered);
 	            	   msg.setData(b);
 		         	   msg.what=update_transfer_progress;
-		         	   Log.e(tag, "ChatThread update transfer progress");
+		         	  // Log.e(tag, "ChatThread update transfer progress");
 	            	   mHandler.sendMessage(msg);
 				//}
 				

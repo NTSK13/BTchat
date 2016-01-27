@@ -1,7 +1,11 @@
 package com.exe.chat;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -40,7 +44,7 @@ public class ChatActivity extends Activity {
 	private String string_uuid="00001101-0000-1000-8000-00805F9B34FB";
 	private BluetoothSocket server_socket; 
 	private BluetoothSocket client_socket; 
-	BluetoothServerSocket server_bt_socket;
+	private BluetoothServerSocket server_bt_socket;
 	
 	private ListView lv;
 	private Button bsend_msg;
@@ -52,9 +56,9 @@ public class ChatActivity extends Activity {
 	private ProgressDialog receive_progressDiag;
 	private long receive_progressStatus=0;
 
-    private final int request_visibility_item_id=0x100;
+    private final int save_chat_record_item_id=0x100;
     private final int FB_REQUEST_CODE=0x01;
-    private final int FB_RESULT_CODE=0x02;
+
     private final int client_ready2=0x01;
     private final int client_msg_get=0x02;
     private final int client_ready=0x03;
@@ -68,11 +72,12 @@ public class ChatActivity extends Activity {
     private final int start_transfer_file=0x26;
     private final int ask_if_accept=0x27;
     private final int response_if_accept=0x28;
-    
+    private final int target_socket_disconnect=0x30;
+
     private String send_msg;
     private boolean is_client=false;
 	private boolean is_from_search_device=false;
-	
+	private boolean  is_destroy=false;
 	private String send_file_path;
 	private String send_file_name;
 	private long send_file_size;
@@ -82,27 +87,34 @@ public class ChatActivity extends Activity {
 	private Timer myTimer=null;
     private ChatThread ServerChatThread;
     private ChatThread ClientChatThread;
-    private BluetoothSocket target_socket;
+    private BluetoothSocket target_socket=null;
     
     private ChatMsgEntity Myentity = new ChatMsgEntity();
     private ChatMsgEntity Yourentity = new ChatMsgEntity();
-    List<ChatMsgEntity> mDataArrays = new ArrayList<ChatMsgEntity>();
+    
+    private ChatMsgEntity getDateEntity =new ChatMsgEntity();
+    
+    private List<ChatMsgEntity> mDataArrays = new ArrayList<ChatMsgEntity>();
     private String my_device_name;
     private String your_device_name;  
     
-    ChatMsgViewAdapter mListViewAdapter;
+    private ChatMsgViewAdapter mListViewAdapter;
     
-	public ArrayList<BluetoothDevice>  find_device_list;
-	public ArrayList<BluetoothDevice>  bonded_device_list;
+	private ArrayList<String>  save_chat_list;
+    
+	private ArrayList<BluetoothDevice>  find_device_list;
+	private ArrayList<BluetoothDevice>  bonded_device_list;
 	private ArrayAdapter<String> find_device_name_adapter;
 	private ArrayAdapter<String> bonded_device_name_adapter;
 	private Set<BluetoothDevice> pairedDevices;
-	public BluetoothDevice target_device=null;
+	private BluetoothDevice target_device=null;
 	
 	private int bonded_item_position=0;
 	private boolean bonded_item_selected=false;
 	private int founded_item_position=0;
 	private boolean founded_item_selected=false;
+
+	private FileOutputStream outs;
 	
     private Handler chat_handler=new Handler(){
 
@@ -129,7 +141,16 @@ public class ChatActivity extends Activity {
 				     
 				     mListViewAdapter.notifyDataSetChanged();
 				     lv.setSelection(mListViewAdapter.getCount() - 1);
-	  				
+				     
+				     try {
+				    	 save_chat_list.add("\n"+your_device_name+"--");
+				    	 save_chat_list.add(Yourentity.getDate()+"\n");
+					     save_chat_list.add(client_get_msg);
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+	  				 
+				     
 					break;
 					
 				case client_ready:
@@ -191,7 +212,14 @@ public class ChatActivity extends Activity {
 				     
 				     mListViewAdapter.notifyDataSetChanged();
 				     lv.setSelection(mListViewAdapter.getCount() - 1);
-	
+				     try{
+				    	 save_chat_list.add("\n"+your_device_name+"--");
+				    	 save_chat_list.add(Yourentity.getDate()+"\n");
+					     save_chat_list.add(server_get_msg);
+				     }catch (Exception e) {
+						e.printStackTrace();
+					 }
+				     
 					break;			
 				case server_ready:
 					ServerChatThread =new ChatThread(server_socket, chat_handler,false);
@@ -209,7 +237,7 @@ public class ChatActivity extends Activity {
 					transfer_progressDiag.setMax((int)send_file_size);
 					
 					Log.e(tag,"ChatActivity update transfer progress,transfer_progressStatus= "+transfer_progressStatus);
-					if( transfer_progressStatus >= (send_file_size-1000)){
+					if( transfer_progressStatus >= (send_file_size-512)){
 						transfer_progressDiag.dismiss();
 						break;
 					}
@@ -235,7 +263,7 @@ public class ChatActivity extends Activity {
 					Log.e(tag,"ChatActivity fileSize : "+receive_file_size+" ,receive_progressStatus : "+receive_progressStatus);
 					//receive_progressStatus=receive_progressStatus *100 / receive_file_size ;
 					Log.e(tag,"update receive progress,receive_progressStatus= "+receive_progressStatus);
-					if( receive_progressStatus >= ((int)receive_file_size-1000)){
+					if( receive_progressStatus >= ((int)receive_file_size-512)){
 						receive_progressDiag.dismiss();
 						break;
 					}
@@ -300,6 +328,34 @@ public class ChatActivity extends Activity {
 						chat_handler.sendEmptyMessage(start_transfer_file); 
 					}
 					break;
+				case target_socket_disconnect:
+					Log.e(tag,"target_socket_disconnect");
+					if(is_destroy){
+						break;
+					}
+					AlertDialog.Builder ask_reboot_Dialog=new AlertDialog.Builder(ChatActivity.this);
+			        ask_reboot_Dialog.setTitle("连接已断开");
+			        ask_reboot_Dialog.setMessage("是否重新启动本应用 ?");
+			        ask_reboot_Dialog.setCancelable(false);
+			        ask_reboot_Dialog.setNegativeButton("关闭", new OnClickListener(){
+						@Override
+						public void onClick(DialogInterface arg0, int arg1) {
+							finish();
+						}
+			        });
+			        
+			        ask_reboot_Dialog.setPositiveButton("重启", new OnClickListener() {
+						@Override
+						public void onClick(DialogInterface arg0, int arg1) {
+							Intent i = getBaseContext().getPackageManager().getLaunchIntentForPackage(getBaseContext().getPackageName());  
+							i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);  
+							startActivity(i);
+						}
+					});
+			        ask_reboot_Dialog.show();     
+					
+					
+					break;
 				default:
 				break;
 			}
@@ -350,20 +406,31 @@ public class ChatActivity extends Activity {
 
 
 	public void send_msg_handler(View v){
+		Log.v(tag, "send_msg_handler start");
     	send_msg=et_send_msg.getText().toString().trim();
 		if(send_msg.equals("")){
+			Log.v(tag, "start FB");
 			Intent it=new Intent();
 			it.setAction("android.intent.action.FileBrowser");
 			
 			startActivityForResult(it, FB_REQUEST_CODE);	
 		}
-		
+
         Myentity.setDate(Myentity.getDate());
         Myentity.setText(send_msg);
         Myentity.setName("我-"+my_device_name);
         Myentity.setMsgType(false);
         mDataArrays.add(Myentity);
+
+        try {
+         save_chat_list.add("\n我-"+my_device_name+"--");
+   	     save_chat_list.add(Myentity.getDate()+"\n");
+   	     save_chat_list.add(send_msg);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
         
+
 		if(is_client){
 			ClientChatThread.write(send_msg);
 		}else{
@@ -371,6 +438,7 @@ public class ChatActivity extends Activity {
 		}
 		et_send_msg.setText("");
 		bsend_msg.setBackgroundResource(R.drawable.add);
+	
     }
     
     public void request_connect_handler(View v){
@@ -416,7 +484,7 @@ public class ChatActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
-        
+        is_destroy=false;
         lv=(ListView)findViewById(R.id.chat_list_view);
         bsend_msg=(Button)findViewById(R.id.btn_send);
         et_send_msg=(EditText)findViewById(R.id.et_sendmsg);
@@ -435,6 +503,8 @@ public class ChatActivity extends Activity {
         mListViewAdapter = new ChatMsgViewAdapter(this, mDataArrays );
         lv.setAdapter(mListViewAdapter);
         register_myBTReceiver();
+        
+         save_chat_list=new ArrayList<String> ();
     }
 
     private void  enable_my_device(){
@@ -494,6 +564,7 @@ public class ChatActivity extends Activity {
 	protected void onDestroy() {
 		// TODO Auto-generated method stub
 		super.onDestroy();
+		is_destroy=true;
 		Log.e(tag, "onDestroy start");
 		if(mReceiver !=null){
 			unregisterReceiver(mReceiver);
@@ -505,7 +576,11 @@ public class ChatActivity extends Activity {
 			
 				ClientChatThread.destroy();
 			    clientThread.destroy();
-			} catch (Exception e) {
+			} catch (IOException e) {
+				Log.e(tag,"onDestroy  client IOException");
+				e.printStackTrace();
+			}catch(Exception e){
+				Log.e(tag,"onDestroy  client Exception");
 				e.printStackTrace();
 			}
 		      
@@ -515,7 +590,11 @@ public class ChatActivity extends Activity {
 				server_bt_socket.close();
 				ServerChatThread.destroy();
 			    serverThread.destroy();
-			} catch (Exception e) {
+			} catch (IOException e) {
+				Log.e(tag,"onDestroy  server IOException");
+				e.printStackTrace();
+			}catch(Exception e){
+				Log.e(tag,"onDestroy  server Exception");
 				e.printStackTrace();
 			}
 		}
@@ -613,7 +692,7 @@ public class ChatActivity extends Activity {
          myBondedDialog.setPositiveButton("开始聊天", new OnClickListener() {
  			@Override
  			public void onClick(DialogInterface arg0, int arg1) {
- 				Toast.makeText(ChatActivity.this, "开始聊天-确定", Toast.LENGTH_SHORT).show();
+ 				//Toast.makeText(ChatActivity.this, "开始聊天-确定", Toast.LENGTH_SHORT).show();
  				Log.e(tag, "bonded_item_position="+bonded_item_position);
  				if(bonded_item_selected==false){
  					bonded_item_position=0;
@@ -643,7 +722,7 @@ public class ChatActivity extends Activity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.chat, menu);
-        menu.add(0, request_visibility_item_id, 0, "打开设备可见性");
+        menu.add(0, save_chat_record_item_id, 0, "保存聊天记录");
 
         return true;
     }
@@ -655,10 +734,45 @@ public class ChatActivity extends Activity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
        
-        if(id==request_visibility_item_id){
-        	enable_my_device_visible();
+        if(id==save_chat_record_item_id){
+        	Log.v(tag, "start save record");
+        	save_chat_record();
         }
 
         return super.onOptionsItemSelected(item);
+    }
+    
+    private void save_chat_record(){
+    	
+    	String chat_record_path="/sdcard/achat/";
+    	String date=getDateEntity.getDate();
+    	String save_record_name="chat-"+date;
+    	String save_record_path=chat_record_path+save_record_name+".txt";
+    	byte[] buffer = new byte[1024];  // buffer store for the stream
+    	
+    	File save_record_dir=new File(chat_record_path);
+    	save_record_dir.mkdir();
+    	File save_record_file=new File(save_record_path);
+    	try {
+        	outs=new FileOutputStream(save_record_file);	
+    		ListIterator<String> it=save_chat_list.listIterator();
+    		while(it.hasNext()) {
+    			 buffer=it.next().getBytes();
+    			 outs.write( buffer );
+    			 //outs.write('\n');
+    			 outs.flush();
+    		}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}finally{
+			try {
+				outs.close();
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
+
+		}
     }
 }
