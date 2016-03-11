@@ -13,7 +13,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -27,13 +26,8 @@ public class FileBrowserActivity extends Activity {
 	private ListView lv;
 	private File currentParentPath;
 	private File[] currentFiles;
-
-	private int count=0;
-	private ArrayList<File> ParentPathArray;
-	private ArrayList<File[]> ParentFilesArray;
-	
 	private String root_dir;
-    private final int back_item_id=0x111;
+	
 	
 
 	@Override
@@ -61,15 +55,6 @@ public class FileBrowserActivity extends Activity {
 			Log.v(tag, root_dir +"  is exist");
 			currentParentPath=root;
 			currentFiles=root.listFiles();
-			count=0;
-			ParentPathArray=new ArrayList<File>();
-			ParentFilesArray=new ArrayList<File[]>();
-			
-			ParentPathArray.add(count, currentParentPath);
-			ParentFilesArray.add(count, currentFiles);
-			count++;
-			
-			
 			Arrays.sort(currentFiles);
 			inflateListView(currentFiles);
 		}
@@ -91,12 +76,7 @@ public class FileBrowserActivity extends Activity {
 				}
 				
 				File[] tmp=currentFiles[position].listFiles();
-				ParentPathArray.add(count, currentParentPath);
-				ParentFilesArray.add(count, currentFiles);
-				count++;
-				
 				if( tmp !=null && tmp.length!=0){
-					
 					currentParentPath=currentFiles[position];
 					currentFiles=tmp;
 					Arrays.sort(currentFiles);
@@ -127,38 +107,12 @@ public class FileBrowserActivity extends Activity {
 		lv.setAdapter(sadp);
 				
 	}
-	
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.chat, menu);
-        menu.add(0, back_item_id, 0, "返回到上一目录");
-   
-        return true;
-    }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-       
-        if(id==back_item_id){
-        	Log.v(tag, "start save record");
-        	back_to_upper();
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-    
-    private void back_to_upper(){
-    	count--;
-    	currentParentPath=ParentPathArray.get(count);
-    	currentFiles=ParentFilesArray.get(count);
-		count++;
-		
-		inflateListView(currentFiles);
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.chat , menu);
+		return true;
 	}
-	
+
 }

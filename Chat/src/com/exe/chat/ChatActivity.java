@@ -160,7 +160,7 @@ public class ChatActivity extends Activity {
 	   				}
 
 	   				//启动客户端线程
-	                clientThread=new Thread(new Runnable(){
+					clientThread=new Thread(new Runnable(){
 	            		@Override
 	            		public void run() {
 	            			Log.e(tag, "clientThread run ");
@@ -250,7 +250,7 @@ public class ChatActivity extends Activity {
 					receive_progressDiag.setTitle("接收进度");
 					receive_progressDiag.setCancelable(false);
 					receive_progressDiag.setIndeterminate(false);
-					receive_progressDiag.setMessage("接收完成百分比:");
+					receive_progressDiag.setMessage("接收完成百分比：");
 					receive_progressDiag.setProgress(0);
 					receive_progressDiag.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
 					receive_progressDiag.show();
@@ -335,7 +335,7 @@ public class ChatActivity extends Activity {
 					}
 					AlertDialog.Builder ask_reboot_Dialog=new AlertDialog.Builder(ChatActivity.this);
 			        ask_reboot_Dialog.setTitle("连接已断开");
-			        ask_reboot_Dialog.setMessage("是否重新启动本应用 ?");
+			        ask_reboot_Dialog.setMessage("是否重新启动本应�??");
 			        ask_reboot_Dialog.setCancelable(false);
 			        ask_reboot_Dialog.setNegativeButton("关闭", new OnClickListener(){
 						@Override
@@ -418,12 +418,12 @@ public class ChatActivity extends Activity {
 
         Myentity.setDate(Myentity.getDate());
         Myentity.setText(send_msg);
-        Myentity.setName("我-"+my_device_name);
+        Myentity.setName("�?"+my_device_name);
         Myentity.setMsgType(false);
         mDataArrays.add(Myentity);
 
         try {
-         save_chat_list.add("\n我-"+my_device_name+"--");
+         save_chat_list.add("\n�?"+my_device_name+"--");
    	     save_chat_list.add(Myentity.getDate()+"\n");
    	     save_chat_list.add(send_msg);
 		} catch (Exception e) {
@@ -512,7 +512,7 @@ public class ChatActivity extends Activity {
          try {
  			Log.e(tag, "Get BT adapter");
  			if(! myBtAdapter.isEnabled()){// 如果没有打开蓝牙,那么打开蓝牙
- 				//弹出对话框,提示用户打开蓝牙
+ 				//弹出对话�?提示用户打开蓝牙
  				//Intent it =new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
  				//startActivity(it);
  				myBtAdapter.enable();//无通知直接打开蓝牙
@@ -533,7 +533,7 @@ public class ChatActivity extends Activity {
     }
     
     private void register_myBTReceiver(){
-    	/***********************注册BT广播接收器************************/
+    	/***********************注册BT广播接收�?***********************/
         IntentFilter filter=new IntentFilter(BluetoothDevice.ACTION_FOUND);
         registerReceiver(mReceiver, filter);
     }
@@ -613,7 +613,7 @@ public class ChatActivity extends Activity {
     private void search_device_and_chat(){
     	Log.e(tag, "start search...");
         myBtAdapter.startDiscovery();//search
-        Toast.makeText(this, "搜索蓝牙设备中 ...", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "搜索蓝牙设备�?...", Toast.LENGTH_LONG).show();
     	
         find_device_name_adapter=new ArrayAdapter<String>(this, android.R.layout.select_dialog_singlechoice);
         AlertDialog.Builder myDialog=new AlertDialog.Builder(this);
@@ -692,7 +692,7 @@ public class ChatActivity extends Activity {
          myBondedDialog.setPositiveButton("开始聊天", new OnClickListener() {
  			@Override
  			public void onClick(DialogInterface arg0, int arg1) {
- 				//Toast.makeText(ChatActivity.this, "开始聊天-确定", Toast.LENGTH_SHORT).show();
+ 				//Toast.makeText(ChatActivity.this, "开始聊天确定", Toast.LENGTH_SHORT).show();
  				Log.e(tag, "bonded_item_position="+bonded_item_position);
  				if(bonded_item_selected==false){
  					bonded_item_position=0;
